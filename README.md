@@ -89,3 +89,37 @@ if not(passok):
 else:
     print("SUCCESS")
 ```
+### Correct password
+We can use the same code to send now the correct password correct ("touch"), as shown below. The returned value should be now rv=1, as it can be checked through the appearanec of the message SUCCESS.
+
+```python
+pw = "touch".encode('ascii')
+target.simpleserial_write('p', pw)
+val = target.simpleserial_read_witherrors('r', 1, glitch_timeout=10)
+passok = int.from_bytes(val["payload"], byteorder='big', signed=False)
+print(val)
+print(passok)
+if not(passok):
+    print("FAILED")
+else:
+    print("SUCCESS")
+
+```
+
+## Clock glitch
+After validating the expected behaviour of the code, wa aim at changing it through a clock glitch. The following cell defines the parameters needed for the fault injection. Using the function print shows the values of all parameters of the glitch module. We can find here the three parameters described earlier:
+
+- width,
+- offset (shift),
+- ext_offset (delay).
+- 
+We need to tune these three parameters accordingly.
+
+```python
+scope.glitch.clk_src = "clkgen"
+scope.glitch.output = "clock_xor"
+scope.glitch.trigger_src = "ext_single"
+scope.io.hs2 = "glitch"
+scope.adc.timeout = 0.1
+print(scope.glitch)
+```
