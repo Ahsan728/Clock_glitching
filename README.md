@@ -112,7 +112,7 @@ After validating the expected behaviour of the code, wa aim at changing it throu
 - width,
 - offset (shift),
 - ext_offset (delay).
-- 
+  
 We need to tune these three parameters accordingly.
 
 ```python
@@ -123,3 +123,25 @@ scope.io.hs2 = "glitch"
 scope.adc.timeout = 0.1
 print(scope.glitch)
 ```
+### Characterization code
+
+There are three parameters to define: the width, the offset (shift), and the delay. At first, there is no easy way to guess the best correct values that will allow to inject an exploitable fault. In principle, we should therefore explore the full search space in order to find the optimal combination of values, leading to a successful attack (being authorized with the wrong password).
+
+If we were to test all possible values, this would mean:
+
+- every possible width, between 1 and 49, by steps of 1: 49 possible values,
+- every possible offset, between -49 et +49, by steps of 1: 99 possible values,
+- every possible clock cycle (delay) between 1 and 200, by steps of 1: 200 possible values.
+
+The exhaustive search for the above space would lead to:  49×99×200≃106  possible combinations. Even if we were able to try 100 triples per second (which is already an upper bound!), this process would require  104  seconds, i.e., a bit less than 3 hours. How much time do you still have today, before the end of the session?
+
+Even if exhaustive search of the parameter space may be a viable (and somteimes the only) approach, we are going to speed things up a little. In fact, this method is time consuming as the three parameters and independents of each other and all combinations should be tested. We will see how to reduce the degrees of freedom and thus the number of dimensions to explore.
+
+In particular, the delay is mostly dependent on the application we are targeting, whereas the width and the offset depend on the actual physical properties of the platform. We will resort to a characterisation algorithm, where faults will be easily observable. This code is made by two nested for loops, each made of 50 iterations, where a global counter is incremented. The value of this counter is read at the end. Normally, the expected result would be 50×50=2500. On the other hand, one for loop can be easily faulted: two nested loops even more easily.
+
+The goal is to find the values for width and offset that lead to an actual (potentially exploitable) error. In order to relax the constraint on the delay value (needed to target a specific instruction), we will try to inject several consecutive clock glitches. To achieve this effect, we are going to set the parameter repeat to a large value (for instance, 20), to inject several consecutive glitches.
+
+```python
+scope.glitch.repeat = 20
+```
+
