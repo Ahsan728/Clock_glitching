@@ -49,8 +49,43 @@ CW_PATH = '/home/vagrant/work/projects/chipwhisperer/'
 ```
 ### Connecting to target board
 The next step is to connect to the chipwhisperer board. To ensure communication, we must receive: Found ChipWhisperer
+
 ![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/1c074339-8317-4e1c-9dfa-0dd00f7141fe)
 ```python
 %run $CW_PATH"jupyter/Setup_Scripts/Setup_Generic.ipynb"
 ```
+### Programming and initializing the target
+After connecting the board, we need to program its flash memory:
 
+```python
+import chipwhisperer as cw
+fw_path = "{}/hardware/victims/firmware/simpleserial-glitch/simpleserial-glitch-{}.hex".format(CW_PATH, PLATFORM)
+cw.program_target(scope, prog, fw_path)
+scope.io.nrst = False
+time.sleep(0.05)
+scope.io.nrst = "high_z"
+time.sleep(0.05)
+target.flush()
+```
+
+## Testing nominal behavior
+The next step is to ensure the correct operation of the program implemented on the board, for this purpose we first 
+enter a wrong password and then a correct password, it can be seen that first an "FAILED" message and then a "SUCCESS" 
+message are displayed, so the program correctly Works.
+
+### Wrong password
+
+What happens if a wrong password in inserted? The system should indeed deny the authentication. We use the variable pw to define, in ASCII encoding, the password we want to submit. The communication with the target board is provided through a serial link. We can use the function simpleserial_write to send the command p (send a password) together with a random value, for instance "aeiou". We need then to read the answer from the board with the function simpleserial_read_witherrors and the parameter r (reading). The result is stored in the val variable, which has a complex structure. The interesting field is the rv (return value), storing the vlue of the answer to the passwrod that was sent. As we sent the wrong password, we expect to get rv=0. We check that this is the case by verifying that FAILED is returned.
+
+```python
+pw = "aeiou".encode('ascii')
+target.simpleserial_write('p', pw)
+val = target.simpleserial_read_witherrors('r', 1, glitch_timeout=10)
+passok = int.from_bytes(val["payload"], byteorder='big', signed=False)
+print(val)
+print(passok)
+if not(passok):
+    print("FAILED")
+else:
+    print("SUCCESS")
+```
