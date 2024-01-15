@@ -24,14 +24,33 @@ of the processor. Otherwise, the processor will not have enough time to perform 
 always be true:
 - 𝑇𝑐𝑙𝑜𝑐𝑘 > 𝑇𝑆𝑒𝑡𝑢𝑝 𝑇𝑖𝑚𝑒 +𝑇𝐶𝑟𝑖𝑡𝑖𝑐𝑎𝑙 𝑝𝑎𝑡ℎ…………….(1.1)
 
-Now, in this attack, the attacker is trying to violate the time limits for the correct operation of the system by reducing the clock period, and as a result, the system cannot 
-continue its normal operation during the periods when the timing limit is violated.For example, if the processor makes a request to read from the memory and this time the attacker 
-violates the time limits, then the processor will not have enough time to receive data from the bus, resulting in incorrect reading from the memory. Also, in cases where the clock 
-period is reduced before the end of the current instruction, the processor jumps to the next instruction before the end of the current instruction, thus losing the result of the 
-current instruction.
+Now, in this attack, the attacker is trying to violate the time limits for the correct operation of the system by reducing the clock period, and as a result, the system cannot continue its normal operation during the periods when the timing limit is violated.For example, if the processor makes a request to read from the memory and this time the attacker violates the time limits, then the processor will not have enough time to receive data from the bus, resulting in incorrect reading from the memory. Also, in cases where the clock period is reduced before the end of the current instruction, the processor jumps to the next instruction before the end of the current instruction, thus losing the result of the current instruction.
 
 ![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/15dca8c6-6267-4b50-bdab-4166c016d416) ![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/a491ca42-e448-4715-abbf-aefab4841b5f)
 
-This Figure shows the normal clock signal for a pipeline-based processor, as can be seen, this processor performs a new operation on each rising edge of the clock signal, and 
-the clock period is set in such a way that the entire operation has enough time to be done, now if the injection of a fault on the clock signal can cause a new edge or in 
-other words to shorten the period, then the instruction currently being executed in the pipeline will not have enough time to complete.
+This Figure shows the normal clock signal for a pipeline-based processor, as can be seen, this processor performs a new operation on each rising edge of the clock signal, and the clock period is set in such a way that the entire operation has enough time to be done, now if the injection of a fault on the clock signal can cause a new edge or in other words to shorten the period, then the instruction currently being executed in the pipeline will not have enough time to complete.
+
+## Clock glitching parameters
+In this work a simple password verification software is run on the ChipWhisperer chip and clock glitching will be used in order to fault the processor into accepting a password that is actually incorrect. This will require skipping the correct instruction during execution, and so in order to achieve a skip, the glitch must be placed correctly. This poses a problem because there are three independent variables to control for a glitch:
+
+- Width: the length of the positive clock, a percentage of the original clock cycle.
+- Delay: between the trigger signal and the rising edge of the targeted clock cycle.
+- Shift: length from the rising edge of the targeted clock cycle and the start of the clock glitch.
+
+![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/fc31bac6-40a8-437b-bb76-585c84875140)
+
+## Preliminary steps
+After installing the chipwhisper, we must introduce the setup path:
+```python
+SCOPETYPE = 'OPENADC'
+PLATFORM = 'CWLITEARM'
+#other platforms: CW308_STM32F1, CW308_STM32F0, CW308_STM32F3, CW308_STM32F4 or CWNANO
+CW_PATH = '/home/vagrant/work/projects/chipwhisperer/'
+```
+### Connecting to target board
+The next step is to connect to the chipwhisperer board. To ensure communication, we must receive: Found ChipWhisperer
+![image](https://github.com/Ahsan728/Clock_glitching/assets/34878134/1c074339-8317-4e1c-9dfa-0dd00f7141fe)
+```python
+%run $CW_PATH"jupyter/Setup_Scripts/Setup_Generic.ipynb"
+```
+
